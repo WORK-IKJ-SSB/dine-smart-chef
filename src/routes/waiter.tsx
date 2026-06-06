@@ -13,7 +13,7 @@ export const Route = createFileRoute("/waiter")({
   component: WaiterPage,
 });
 
-type MenuItem = { id: string; name: string; price: number; category: string };
+type MenuItem = { id: string; name: string; price: number; category: string; image_url: string | null };
 type Order = { id: string; table_number: number; status: string; total: number; created_at: string };
 
 const TABLES = Array.from({ length: 12 }, (_, i) => i + 1);
@@ -146,13 +146,18 @@ function WaiterPage() {
                       <button
                         key={it.id}
                         onClick={() => add(it)}
-                        className="flex items-center justify-between rounded-lg border border-border bg-background p-3 text-left hover:border-primary hover:bg-accent/10 transition"
+                        className="flex items-center gap-3 rounded-lg border border-border bg-background p-3 text-left hover:border-primary hover:bg-accent/10 transition"
                       >
-                        <span>
-                          <span className="font-medium text-foreground">{it.name}</span>
+                        {it.image_url ? (
+                          <img src={it.image_url} alt={it.name} className="h-12 w-12 rounded-md object-cover shrink-0" />
+                        ) : (
+                          <div className="h-12 w-12 rounded-md bg-muted shrink-0" />
+                        )}
+                        <span className="flex-1 min-w-0">
+                          <span className="font-medium text-foreground block truncate">{it.name}</span>
                           <span className="block text-xs text-muted-foreground">${Number(it.price).toFixed(2)}</span>
                         </span>
-                        <Plus className="h-4 w-4 text-primary" />
+                        <Plus className="h-4 w-4 text-primary shrink-0" />
                       </button>
                     ))}
                   </div>
