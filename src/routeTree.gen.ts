@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WaiterRouteImport } from './routes/waiter'
 import { Route as OwnerRouteImport } from './routes/owner'
+import { Route as ChefRouteImport } from './routes/chef'
 import { Route as IndexRouteImport } from './routes/index'
 
 const WaiterRoute = WaiterRouteImport.update({
@@ -23,6 +24,11 @@ const OwnerRoute = OwnerRouteImport.update({
   path: '/owner',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ChefRoute = ChefRouteImport.update({
+  id: '/chef',
+  path: '/chef',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -31,30 +37,34 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/chef': typeof ChefRoute
   '/owner': typeof OwnerRoute
   '/waiter': typeof WaiterRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/chef': typeof ChefRoute
   '/owner': typeof OwnerRoute
   '/waiter': typeof WaiterRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/chef': typeof ChefRoute
   '/owner': typeof OwnerRoute
   '/waiter': typeof WaiterRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/owner' | '/waiter'
+  fullPaths: '/' | '/chef' | '/owner' | '/waiter'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/owner' | '/waiter'
-  id: '__root__' | '/' | '/owner' | '/waiter'
+  to: '/' | '/chef' | '/owner' | '/waiter'
+  id: '__root__' | '/' | '/chef' | '/owner' | '/waiter'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ChefRoute: typeof ChefRoute
   OwnerRoute: typeof OwnerRoute
   WaiterRoute: typeof WaiterRoute
 }
@@ -75,6 +85,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OwnerRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/chef': {
+      id: '/chef'
+      path: '/chef'
+      fullPath: '/chef'
+      preLoaderRoute: typeof ChefRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -87,6 +104,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ChefRoute: ChefRoute,
   OwnerRoute: OwnerRoute,
   WaiterRoute: WaiterRoute,
 }
