@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Sparkles, DollarSign, ShoppingBag, TrendingUp } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { generateInsights } from "@/lib/insights.functions";
+import { MenuManager } from "@/components/MenuManager";
 
 export const Route = createFileRoute("/owner")({
   head: () => ({ meta: [{ title: "Owner — Tavola" }] }),
@@ -134,6 +135,10 @@ function OwnerPage() {
           </p>
         )}
       </Card>
+
+      <div className="mt-8">
+        <MenuManager />
+      </div>
     </StationShell>
   );
 }
