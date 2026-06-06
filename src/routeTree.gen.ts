@@ -9,9 +9,15 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as WaiterRouteImport } from './routes/waiter'
 import { Route as OwnerRouteImport } from './routes/owner'
 import { Route as IndexRouteImport } from './routes/index'
 
+const WaiterRoute = WaiterRouteImport.update({
+  id: '/waiter',
+  path: '/waiter',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OwnerRoute = OwnerRouteImport.update({
   id: '/owner',
   path: '/owner',
@@ -26,31 +32,42 @@ const IndexRoute = IndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/owner': typeof OwnerRoute
+  '/waiter': typeof WaiterRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/owner': typeof OwnerRoute
+  '/waiter': typeof WaiterRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/owner': typeof OwnerRoute
+  '/waiter': typeof WaiterRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/owner'
+  fullPaths: '/' | '/owner' | '/waiter'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/owner'
-  id: '__root__' | '/' | '/owner'
+  to: '/' | '/owner' | '/waiter'
+  id: '__root__' | '/' | '/owner' | '/waiter'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   OwnerRoute: typeof OwnerRoute
+  WaiterRoute: typeof WaiterRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/waiter': {
+      id: '/waiter'
+      path: '/waiter'
+      fullPath: '/waiter'
+      preLoaderRoute: typeof WaiterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/owner': {
       id: '/owner'
       path: '/owner'
@@ -71,6 +88,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   OwnerRoute: OwnerRoute,
+  WaiterRoute: WaiterRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
