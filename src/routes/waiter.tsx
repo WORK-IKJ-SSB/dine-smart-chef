@@ -198,31 +198,43 @@ function WaiterPage() {
                 <div key={cat}>
                   <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">{cat}</p>
                   <div className="grid sm:grid-cols-2 gap-2">
-                    {list.map((it) => (
-                      <button
-                        key={it.id}
-                        onClick={() => add(it)}
-                        className="flex items-center gap-3 rounded-lg border border-border bg-background p-3 text-left hover:border-primary hover:bg-accent/10 transition"
-                      >
-                        {it.image_url ? (
-                          <img src={it.image_url} alt={it.name} className="h-12 w-12 rounded-md object-cover shrink-0" />
-                        ) : (
-                          <div className="h-12 w-12 rounded-md bg-muted shrink-0" />
-                        )}
-                        <span className="flex-1 min-w-0">
-                          <span className="font-medium text-foreground block truncate">{it.name}</span>
-                          <span className="block text-xs text-muted-foreground">{money(it.price)}</span>
-                        </span>
-                        <span className="flex items-center gap-1 shrink-0">
-                          {cart[it.id]?.qty ? (
-                            <span className="min-w-5 h-5 px-1 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center">
-                              {cart[it.id].qty}
-                            </span>
-                          ) : null}
-                          <Plus className="h-4 w-4 text-primary" />
-                        </span>
-                      </button>
-                    ))}
+                    {list.map((it) => {
+                      const qty = cart[it.id]?.qty ?? 0;
+                      return (
+                        <div
+                          key={it.id}
+                          className="flex items-center gap-3 rounded-lg border border-border bg-background p-3 hover:border-primary/50 transition"
+                        >
+                          {it.image_url ? (
+                            <img src={it.image_url} alt={it.name} className="h-12 w-12 rounded-md object-cover shrink-0" />
+                          ) : (
+                            <div className="h-12 w-12 rounded-md bg-muted shrink-0" />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-foreground truncate">{it.name}</p>
+                            <p className="text-xs text-muted-foreground">{money(it.price)}</p>
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              onClick={() => dec(it.id)}
+                              disabled={qty === 0}
+                              className="h-7 w-7 rounded-md border border-border flex items-center justify-center disabled:opacity-30 hover:border-primary"
+                              aria-label={`Remove one ${it.name}`}
+                            >
+                              <Minus className="h-3 w-3" />
+                            </button>
+                            <span className="w-6 text-center text-sm font-semibold">{qty}</span>
+                            <button
+                              onClick={() => add(it)}
+                              className="h-7 w-7 rounded-md border border-primary bg-primary/10 text-primary flex items-center justify-center hover:bg-primary hover:text-primary-foreground"
+                              aria-label={`Add one ${it.name}`}
+                            >
+                              <Plus className="h-3 w-3" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               ))}
