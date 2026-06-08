@@ -84,6 +84,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { title: "TRUST-MOMOS" },
       { name: "description", content: "Orderly Eats is a web application for restaurant order management, featuring owner, waiter, and chef dashboards." },
       { name: "author", content: "Lovable" },
+      { name: "theme-color", content: "#0F172A" },
       { property: "og:title", content: "TRUST-MOMOS" },
       { property: "og:description", content: "Orderly Eats is a web application for restaurant order management, featuring owner, waiter, and chef dashboards." },
       { property: "og:type", content: "website" },
@@ -98,6 +99,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         rel: "stylesheet",
         href: appCss,
+      },
+      {
+        rel: "manifest",
+        href: manifestUrl,
       },
     ],
   }),
