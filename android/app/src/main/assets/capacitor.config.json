@@ -1,0 +1,8 @@
+{
+	"appId": "com.trustmomos.pos",
+	"appName": "TRUST MOMOS",
+	"webDir": "dist/client",
+	"server": {
+		"androidScheme": "https"
+	}
+}
