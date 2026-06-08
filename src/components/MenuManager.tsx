@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Camera, Upload, Sparkles, Trash2, ImageIcon, Loader2, Plus, ImagePlus } from "lucide-react";
+import { Camera, Upload, Sparkles, Trash2, ImageIcon, Loader2, Plus, ImagePlus, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { parseMenuImage, generateDishImage } from "@/lib/menu-ai.functions";
 import { money } from "@/lib/format";
@@ -113,6 +113,16 @@ export function MenuManager() {
     qc.invalidateQueries({ queryKey: ["menu"] });
   }
 
+  async function rename(it: MenuItem) {
+    const next = prompt("Rename item", it.name)?.trim();
+    if (!next || next === it.name) return;
+    const { error } = await supabase.from("menu_items").update({ name: next }).eq("id", it.id);
+    if (error) return toast.error(error.message);
+    toast.success("Renamed");
+    qc.invalidateQueries({ queryKey: ["menu-all"] });
+    qc.invalidateQueries({ queryKey: ["menu"] });
+  }
+
   async function addManually() {
     const name = form.name.trim();
     const price = parseFloat(form.price);
@@ -205,6 +215,12 @@ export function MenuManager() {
                     {generatingId === it.id
                       ? <><Loader2 className="h-3 w-3 animate-spin" /> Generating…</>
                       : <><Sparkles className="h-3 w-3" /> {it.image_url ? "Regenerate" : "Generate image"}</>}
+                  </button>
+                  <button
+                    onClick={() => rename(it)}
+                    className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary"
+                  >
+                    <Pencil className="h-3 w-3" /> Rename
                   </button>
                   <button
                     onClick={() => { setUploadTargetId(it.id); perItemImgRef.current?.click(); }}
