@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { StationShell } from "@/components/StationShell";
@@ -12,7 +12,8 @@ import { generateInsights } from "@/lib/insights.functions";
 import { MenuManager } from "@/components/MenuManager";
 import { money, hour12 } from "@/lib/format";
 import { BillDialog, type BillData } from "@/components/BillDialog";
-import { Receipt } from "lucide-react";
+import { Receipt, Download } from "lucide-react";
+import { downloadDailyBillsPdf, type BillRow } from "@/lib/billsPdf";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/owner")({
@@ -67,6 +68,43 @@ function OwnerPage() {
     });
     setBillOpen(true);
   }
+
+  async function exportDayPdf(silent = false) {
+    if (orders.length === 0) {
+      if (!silent) toast.error("No bills to export yet.");
+      return;
+    }
+    const byOrder = new Map<string, BillRow["items"]>();
+    for (const it of items) {
+      const arr = byOrder.get(it.order_id) ?? [];
+      arr.push({ name: it.name, quantity: it.quantity, price: Number(it.price) });
+      byOrder.set(it.order_id, arr);
+    }
+    const rows: BillRow[] = orders.map((o) => ({
+      table_number: o.table_number,
+      created_at: o.created_at,
+      total: Number(o.total),
+      items: byOrder.get(o.id) ?? [],
+    }));
+    downloadDailyBillsPdf(rows);
+    if (!silent) toast.success("Daily bills PDF downloaded.");
+  }
+
+  // Auto-save end-of-day PDF (once per day, after 23:55 local time)
+  useEffect(() => {
+    const check = () => {
+      const now = new Date();
+      const key = `bills-autosaved-${now.toISOString().slice(0, 10)}`;
+      if (now.getHours() === 23 && now.getMinutes() >= 55 && !localStorage.getItem(key) && orders.length > 0) {
+        exportDayPdf(true);
+        localStorage.setItem(key, "1");
+      }
+    };
+    const id = setInterval(check, 60_000);
+    check();
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orders, items]);
 
   const stats = useMemo(() => {
     const totalOrders = orders.length;
@@ -160,9 +198,14 @@ function OwnerPage() {
       </Card>
 
       <Card className="p-6 mt-8">
-        <h3 className="font-serif text-lg font-semibold mb-4 flex items-center gap-2">
-          <Receipt className="h-5 w-5 text-primary" /> Today's Bills
-        </h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-serif text-lg font-semibold flex items-center gap-2">
+            <Receipt className="h-5 w-5 text-primary" /> Today's Bills
+          </h3>
+          <Button size="sm" variant="outline" onClick={() => exportDayPdf(false)} disabled={orders.length === 0}>
+            <Download className="h-4 w-4 mr-2" /> Download PDF
+          </Button>
+        </div>
         {orders.length === 0 ? (
           <p className="text-sm text-muted-foreground">No orders yet today.</p>
         ) : (
