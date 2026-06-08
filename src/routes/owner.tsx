@@ -17,7 +17,7 @@ import { downloadDailyBillsPdf, type BillRow } from "@/lib/billsPdf";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/owner")({
-  head: () => ({ meta: [{ title: "Owner — Tavola" }] }),
+  head: () => ({ meta: [{ title: "Owner — TRUST MOMOS" }] }),
   component: OwnerPage,
 });
 

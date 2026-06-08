@@ -9,7 +9,7 @@ import { Check, Clock } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/chef")({
-  head: () => ({ meta: [{ title: "Chef — Tavola" }] }),
+  head: () => ({ meta: [{ title: "Chef — TRUST MOMOS" }] }),
   component: ChefPage,
 });
 

@@ -11,7 +11,7 @@ export type BillRow = {
 export function generateDailyBillsPdf(bills: BillRow[], dateLabel: string): jsPDF {
   const doc = new jsPDF();
   doc.setFontSize(18);
-  doc.text("Tavola — Daily Bills", 14, 18);
+  doc.text("TRUST MOMOS — Daily Bills", 14, 18);
   doc.setFontSize(11);
   doc.text(dateLabel, 14, 26);
 
