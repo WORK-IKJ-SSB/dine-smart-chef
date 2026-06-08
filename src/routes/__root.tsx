@@ -12,6 +12,9 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "sonner";
+import { registerServiceWorker } from "../lib/sw-register";
+
+import manifestUrl from "../../public/manifest.webmanifest?url";
 
 function NotFoundComponent() {
   return (
@@ -81,6 +84,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { title: "TRUST-MOMOS" },
       { name: "description", content: "Orderly Eats is a web application for restaurant order management, featuring owner, waiter, and chef dashboards." },
       { name: "author", content: "Lovable" },
+      { name: "theme-color", content: "#0F172A" },
       { property: "og:title", content: "TRUST-MOMOS" },
       { property: "og:description", content: "Orderly Eats is a web application for restaurant order management, featuring owner, waiter, and chef dashboards." },
       { property: "og:type", content: "website" },
@@ -95,6 +99,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         rel: "stylesheet",
         href: appCss,
+      },
+      {
+        rel: "manifest",
+        href: manifestUrl,
       },
     ],
   }),
@@ -120,6 +128,10 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+
+  useEffect(() => {
+    registerServiceWorker();
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
