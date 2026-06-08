@@ -7,9 +7,13 @@ import { StationShell } from "@/components/StationShell";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Sparkles, DollarSign, ShoppingBag, TrendingUp } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, Label } from "recharts";
 import { generateInsights } from "@/lib/insights.functions";
 import { MenuManager } from "@/components/MenuManager";
+import { money, hour12 } from "@/lib/format";
+import { BillDialog, type BillData } from "@/components/BillDialog";
+import { Receipt } from "lucide-react";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/owner")({
   head: () => ({ meta: [{ title: "Owner — Tavola" }] }),
@@ -49,6 +53,21 @@ function OwnerPage() {
     refetchInterval: 5000,
   });
 
+  const [bill, setBill] = useState<BillData | null>(null);
+  const [billOpen, setBillOpen] = useState(false);
+
+  async function viewBill(orderId: string, tableNumber: number, createdAt: string) {
+    const { data, error } = await supabase.from("order_items").select("*").eq("order_id", orderId);
+    if (error) return toast.error(error.message);
+    setBill({
+      tableNumber,
+      createdAt,
+      orderIds: [orderId],
+      items: (data ?? []).map((i: any) => ({ name: i.name, price: Number(i.price), quantity: i.quantity })),
+    });
+    setBillOpen(true);
+  }
+
   const stats = useMemo(() => {
     const totalOrders = orders.length;
     const totalRevenue = orders.reduce((s, o) => s + Number(o.total), 0);
@@ -84,19 +103,23 @@ function OwnerPage() {
     <StationShell title="Owner Dashboard" subtitle="Today's performance & AI insights">
       <div className="grid gap-4 md:grid-cols-3 mb-8">
         <StatCard icon={ShoppingBag} label="Orders Today" value={stats.totalOrders.toString()} />
-        <StatCard icon={DollarSign} label="Revenue" value={`$${stats.totalRevenue.toFixed(2)}`} />
-        <StatCard icon={TrendingUp} label="Avg Ticket" value={`$${(stats.totalOrders ? stats.totalRevenue / stats.totalOrders : 0).toFixed(2)}`} />
+        <StatCard icon={DollarSign} label="Revenue" value={money(stats.totalRevenue)} />
+        <StatCard icon={TrendingUp} label="Avg Ticket" value={money(stats.totalOrders ? stats.totalRevenue / stats.totalOrders : 0)} />
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 mb-8">
         <Card className="p-6">
           <h3 className="font-serif text-lg font-semibold mb-4">Orders by Hour</h3>
-          <div className="h-64">
+          <div className="h-72">
             <ResponsiveContainer>
-              <BarChart data={stats.byHour}>
-                <XAxis dataKey="hour" tickFormatter={(h) => `${h}:00`} stroke="hsl(var(--muted-foreground))" />
-                <YAxis stroke="hsl(var(--muted-foreground))" allowDecimals={false} />
-                <Tooltip />
+              <BarChart data={stats.byHour} margin={{ top: 10, right: 16, bottom: 28, left: 8 }}>
+                <XAxis dataKey="hour" tickFormatter={hour12} stroke="hsl(var(--muted-foreground))" height={40}>
+                  <Label value="Time of Day" position="insideBottom" offset={-8} fill="hsl(var(--muted-foreground))" />
+                </XAxis>
+                <YAxis stroke="hsl(var(--muted-foreground))" allowDecimals={false}>
+                  <Label value="Orders" angle={-90} position="insideLeft" fill="hsl(var(--muted-foreground))" />
+                </YAxis>
+                <Tooltip labelFormatter={(h: number) => hour12(h)} />
                 <Bar dataKey="orders" fill="#ea580c" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -135,6 +158,30 @@ function OwnerPage() {
           </p>
         )}
       </Card>
+
+      <Card className="p-6 mt-8">
+        <h3 className="font-serif text-lg font-semibold mb-4 flex items-center gap-2">
+          <Receipt className="h-5 w-5 text-primary" /> Today's Bills
+        </h3>
+        {orders.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No orders yet today.</p>
+        ) : (
+          <ul className="divide-y divide-border">
+            {orders.map((o) => (
+              <li key={o.id} className="flex items-center justify-between py-2 text-sm">
+                <span className="font-medium">Table {o.table_number}</span>
+                <span className="text-muted-foreground">{new Date(o.created_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</span>
+                <span className="font-semibold">{money(o.total)}</span>
+                <Button size="sm" variant="outline" onClick={() => viewBill(o.id, o.table_number, o.created_at)}>
+                  <Receipt className="h-3 w-3 mr-1" /> Bill
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+
+      <BillDialog open={billOpen} onOpenChange={setBillOpen} bill={bill} showConfirm={false} />
 
       <div className="mt-8">
         <MenuManager />

@@ -88,6 +88,7 @@ export type Database = {
       }
       orders: {
         Row: {
+          billed_at: string | null
           created_at: string
           id: string
           ready_at: string | null
@@ -96,6 +97,7 @@ export type Database = {
           total: number
         }
         Insert: {
+          billed_at?: string | null
           created_at?: string
           id?: string
           ready_at?: string | null
@@ -104,6 +106,7 @@ export type Database = {
           total?: number
         }
         Update: {
+          billed_at?: string | null
           created_at?: string
           id?: string
           ready_at?: string | null

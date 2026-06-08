@@ -5,8 +5,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { StationShell } from "@/components/StationShell";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Plus, Minus, Send, Trash2 } from "lucide-react";
+import { Plus, Minus, Send, Trash2, Receipt } from "lucide-react";
 import { toast } from "sonner";
+import { money } from "@/lib/format";
+import { BillDialog, type BillData } from "@/components/BillDialog";
 
 export const Route = createFileRoute("/waiter")({
   head: () => ({ meta: [{ title: "Waiter — Tavola" }] }),
@@ -14,7 +16,7 @@ export const Route = createFileRoute("/waiter")({
 });
 
 type MenuItem = { id: string; name: string; price: number; category: string; image_url: string | null };
-type Order = { id: string; table_number: number; status: string; total: number; created_at: string };
+type Order = { id: string; table_number: number; status: string; total: number; created_at: string; billed_at: string | null };
 
 const TABLES = Array.from({ length: 12 }, (_, i) => i + 1);
 
@@ -23,6 +25,8 @@ function WaiterPage() {
   const [table, setTable] = useState<number | null>(null);
   const [cart, setCart] = useState<Record<string, { item: MenuItem; qty: number }>>({});
   const [submitting, setSubmitting] = useState(false);
+  const [bill, setBill] = useState<BillData | null>(null);
+  const [billOpen, setBillOpen] = useState(false);
 
   const { data: menu = [] } = useQuery({
     queryKey: ["menu"],
@@ -92,17 +96,39 @@ function WaiterPage() {
     if (!table || Object.keys(cart).length === 0) return;
     setSubmitting(true);
     try {
-      const { data: order, error: oErr } = await supabase
-        .from("orders")
-        .insert({ table_number: table, status: "pending", total })
-        .select().single();
-      if (oErr) throw oErr;
+      // Look for an open (unbilled) order for this table
+      const { data: existing, error: fErr } = await supabase
+        .from("orders").select("*")
+        .eq("table_number", table)
+        .is("billed_at", null)
+        .order("created_at", { ascending: false })
+        .limit(1);
+      if (fErr) throw fErr;
+      let orderId: string;
+      let appended = false;
+      if (existing && existing.length > 0) {
+        const o = existing[0] as Order;
+        orderId = o.id;
+        const newTotal = Number(o.total) + total;
+        const { error: uErr } = await supabase.from("orders")
+          .update({ total: newTotal, status: "pending" })
+          .eq("id", orderId);
+        if (uErr) throw uErr;
+        appended = true;
+      } else {
+        const { data: order, error: oErr } = await supabase
+          .from("orders")
+          .insert({ table_number: table, status: "pending", total })
+          .select().single();
+        if (oErr) throw oErr;
+        orderId = order.id;
+      }
       const rows = Object.values(cart).map((c) => ({
-        order_id: order.id, menu_item_id: c.item.id, name: c.item.name, price: c.item.price, quantity: c.qty,
+        order_id: orderId, menu_item_id: c.item.id, name: c.item.name, price: c.item.price, quantity: c.qty,
       }));
       const { error: iErr } = await supabase.from("order_items").insert(rows);
       if (iErr) throw iErr;
-      toast.success(`Order sent to kitchen for Table ${table}`);
+      toast.success(appended ? `Added to Table ${table}'s open bill` : `Order sent to kitchen for Table ${table}`);
       setCart({});
       qc.invalidateQueries({ queryKey: ["waiter-orders"] });
     } catch (e: any) {
@@ -110,6 +136,36 @@ function WaiterPage() {
     } finally {
       setSubmitting(false);
     }
+  }
+
+  async function openBillForTable(tableNumber: number) {
+    const { data: openOrders, error } = await supabase
+      .from("orders").select("*")
+      .eq("table_number", tableNumber)
+      .is("billed_at", null);
+    if (error) return toast.error(error.message);
+    if (!openOrders || openOrders.length === 0) return toast.error("No open bill for this table");
+    const ids = openOrders.map((o: any) => o.id);
+    const { data: ois } = await supabase.from("order_items").select("*").in("order_id", ids);
+    setBill({
+      tableNumber,
+      createdAt: openOrders[0].created_at,
+      orderIds: ids,
+      items: (ois ?? []).map((i: any) => ({ name: i.name, price: Number(i.price), quantity: i.quantity })),
+    });
+    setBillOpen(true);
+  }
+
+  async function markBillPaid() {
+    if (!bill) return;
+    const { error } = await supabase.from("orders")
+      .update({ billed_at: new Date().toISOString(), status: "paid" })
+      .in("id", bill.orderIds);
+    if (error) return toast.error(error.message);
+    toast.success(`Table ${bill.tableNumber} bill closed`);
+    setBillOpen(false);
+    setBill(null);
+    qc.invalidateQueries({ queryKey: ["waiter-orders"] });
   }
 
   return (
@@ -155,9 +211,16 @@ function WaiterPage() {
                         )}
                         <span className="flex-1 min-w-0">
                           <span className="font-medium text-foreground block truncate">{it.name}</span>
-                          <span className="block text-xs text-muted-foreground">${Number(it.price).toFixed(2)}</span>
+                          <span className="block text-xs text-muted-foreground">{money(it.price)}</span>
                         </span>
-                        <Plus className="h-4 w-4 text-primary shrink-0" />
+                        <span className="flex items-center gap-1 shrink-0">
+                          {cart[it.id]?.qty ? (
+                            <span className="min-w-5 h-5 px-1 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center">
+                              {cart[it.id].qty}
+                            </span>
+                          ) : null}
+                          <Plus className="h-4 w-4 text-primary" />
+                        </span>
                       </button>
                     ))}
                   </div>
@@ -192,7 +255,7 @@ function WaiterPage() {
                       <button onClick={() => add(item)} className="h-6 w-6 rounded border border-border flex items-center justify-center">
                         <Plus className="h-3 w-3" />
                       </button>
-                      <span className="w-14 text-right text-muted-foreground">${(Number(item.price) * qty).toFixed(2)}</span>
+                      <span className="w-16 text-right text-muted-foreground">{money(Number(item.price) * qty)}</span>
                     </div>
                   </li>
                 ))}
@@ -200,7 +263,7 @@ function WaiterPage() {
             )}
             <div className="border-t border-border pt-3 flex items-center justify-between">
               <span className="font-semibold">Total</span>
-              <span className="font-bold text-lg">${total.toFixed(2)}</span>
+              <span className="font-bold text-lg">{money(total)}</span>
             </div>
             <Button
               className="w-full mt-4"
@@ -209,6 +272,11 @@ function WaiterPage() {
             >
               <Send className="h-4 w-4 mr-2" /> Send to Kitchen
             </Button>
+            {table && (
+              <Button variant="outline" className="w-full mt-2" onClick={() => openBillForTable(table)}>
+                <Receipt className="h-4 w-4 mr-2" /> Generate Bill for Table {table}
+              </Button>
+            )}
           </Card>
 
           <Card className="p-5">
@@ -221,9 +289,11 @@ function WaiterPage() {
                   <li key={o.id} className="flex items-center justify-between text-sm border-b border-border pb-2 last:border-0">
                     <span>Table {o.table_number}</span>
                     <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                      o.status === "ready" ? "bg-accent text-accent-foreground" : "bg-secondary text-secondary-foreground"
+                      o.status === "ready" ? "bg-accent text-accent-foreground"
+                      : o.status === "paid" ? "bg-muted text-muted-foreground"
+                      : "bg-secondary text-secondary-foreground"
                     }`}>{o.status}</span>
-                    <span className="text-muted-foreground">${Number(o.total).toFixed(2)}</span>
+                    <span className="text-muted-foreground">{money(o.total)}</span>
                   </li>
                 ))}
               </ul>
@@ -231,6 +301,13 @@ function WaiterPage() {
           </Card>
         </div>
       </div>
+      <BillDialog
+        open={billOpen}
+        onOpenChange={setBillOpen}
+        bill={bill}
+        onConfirm={markBillPaid}
+        confirmLabel="Mark Paid & Close"
+      />
     </StationShell>
   );
 }
