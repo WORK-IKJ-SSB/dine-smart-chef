@@ -34,6 +34,13 @@ export function BillDialog({
   function print() {
     const w = window.open("", "_blank", "width=400,height=600");
     if (!w) return;
+    const esc = (s: string) =>
+      String(s)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
     w.document.write(`
       <html><head><title>Bill - Table ${bill!.tableNumber}</title>
       <style>
@@ -47,10 +54,10 @@ export function BillDialog({
         .tot{font-weight:700;font-size:15px}
       </style></head><body>
       <h2>TRUST MOMOS</h2>
-      <div class="muted">Table ${bill!.tableNumber} · ${new Date(bill!.createdAt).toLocaleString()}</div>
+      <div class="muted">Table ${bill!.tableNumber} · ${esc(new Date(bill!.createdAt).toLocaleString())}</div>
       <div class="line"></div>
       <table>
-        ${bill!.items.map(i => `<tr><td>${i.name} × ${i.quantity}</td><td class="r">₹${(Number(i.price)*i.quantity).toFixed(2)}</td></tr>`).join("")}
+        ${bill!.items.map(i => `<tr><td>${esc(i.name)} × ${Number(i.quantity)}</td><td class="r">₹${(Number(i.price)*i.quantity).toFixed(2)}</td></tr>`).join("")}
       </table>
       <div class="line"></div>
       <table>
