@@ -8,7 +8,7 @@ export const generateInsights = createServerFn({ method: "POST" })
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("LOVABLE_API_KEY missing");
 
-    const prompt = `You are a restaurant operations analyst. Given today's sales data, write 3 concise, actionable insights (max 2 sentences each). Be specific and reference numbers. Return plain markdown bullet list, no preamble.\n\nData:\n${JSON.stringify(data.stats, null, 2)}`;
+    const prompt = `You are a restaurant operations analyst for an Indian restaurant. Given today's sales data, write 3 concise, actionable insights (max 2 sentences each). Be specific and reference numbers. ALL monetary values MUST be formatted in Indian Rupees using the ₹ symbol (e.g. ₹1,250.00). Never use $ or any other currency symbol. Return plain markdown bullet list, no preamble.\n\nData (all amounts are in INR / ₹):\n${JSON.stringify(data.stats, null, 2)}`;
 
     const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
