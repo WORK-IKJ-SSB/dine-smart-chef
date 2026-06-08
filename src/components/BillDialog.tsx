@@ -46,7 +46,7 @@ export function BillDialog({
         .line{border-top:1px dashed #999;margin:8px 0}
         .tot{font-weight:700;font-size:15px}
       </style></head><body>
-      <h2>Tavola</h2>
+      <h2>TRUST MOMOS</h2>
       <div class="muted">Table ${bill!.tableNumber} · ${new Date(bill!.createdAt).toLocaleString()}</div>
       <div class="line"></div>
       <table>

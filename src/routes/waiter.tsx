@@ -11,7 +11,7 @@ import { money } from "@/lib/format";
 import { BillDialog, type BillData } from "@/components/BillDialog";
 
 export const Route = createFileRoute("/waiter")({
-  head: () => ({ meta: [{ title: "Waiter — Tavola" }] }),
+  head: () => ({ meta: [{ title: "Waiter — TRUST MOMOS" }] }),
   component: WaiterPage,
 });
 
