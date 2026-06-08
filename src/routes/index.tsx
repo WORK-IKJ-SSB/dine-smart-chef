@@ -24,7 +24,7 @@ function Index() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <header className="px-6 py-10 text-center">
-        <p className="text-sm uppercase tracking-[0.3em] text-muted-foreground">Tavola</p>
+        <p className="text-sm uppercase tracking-[0.3em] text-muted-foreground">TRUST MOMOS</p>
         <h1 className="mt-3 text-5xl md:text-6xl font-serif font-bold text-foreground">
           Restaurant Orders, Orchestrated
         </h1>
