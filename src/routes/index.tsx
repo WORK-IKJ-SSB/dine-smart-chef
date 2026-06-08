@@ -5,9 +5,9 @@ import { ChefHat, Utensils, BarChart3 } from "lucide-react";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Tavola — Restaurant Orders" },
+      { title: "TRUST MOMOS — Restaurant Orders" },
       { name: "description", content: "Manage restaurant orders across owner, waiter, and chef in one place." },
-      { property: "og:title", content: "Tavola — Restaurant Orders" },
+      { property: "og:title", content: "TRUST MOMOS — Restaurant Orders" },
       { property: "og:description", content: "Manage restaurant orders across owner, waiter, and chef in one place." },
     ],
   }),
