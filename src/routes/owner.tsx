@@ -243,6 +243,11 @@ function OwnerPage({ onSignOut }: { onSignOut: () => void }) {
 
   return (
     <StationShell title="Owner Dashboard" subtitle="Today's performance & AI insights">
+      <div className="flex justify-end mb-4">
+        <Button size="sm" variant="outline" onClick={onSignOut}>
+          <LogOut className="h-4 w-4 mr-2" /> Sign out
+        </Button>
+      </div>
       <div className="grid gap-4 md:grid-cols-3 mb-8">
         <StatCard icon={ShoppingBag} label="Orders Today" value={stats.totalOrders.toString()} />
         <StatCard icon={DollarSign} label="Revenue" value={money(stats.totalRevenue)} />
