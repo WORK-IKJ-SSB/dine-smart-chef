@@ -13,6 +13,7 @@ import { MenuManager } from "@/components/MenuManager";
 import { money, hour12 } from "@/lib/format";
 import { BillDialog, type BillData } from "@/components/BillDialog";
 import { Receipt, Download } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { downloadDailyBillsPdf, type BillRow } from "@/lib/billsPdf";
 import { toast } from "sonner";
 
@@ -97,6 +98,18 @@ function OwnerPage() {
       items: (data ?? []).map((i: any) => ({ name: i.name, price: Number(i.price), quantity: i.quantity })),
     });
     setBillOpen(true);
+  }
+
+  async function deleteBill(orderId: string, tableNumber: number) {
+    if (!confirm(`Delete bill for Table ${tableNumber}? This cannot be undone.`)) return;
+    const { error: ie } = await supabase.from("order_items").delete().eq("order_id", orderId);
+    if (ie) return toast.error(ie.message);
+    const { error: oe } = await supabase.from("orders").delete().eq("id", orderId);
+    if (oe) return toast.error(oe.message);
+    toast.success(`Bill for Table ${tableNumber} deleted`);
+    qc.invalidateQueries({ queryKey: ["owner-history-90d"] });
+    qc.invalidateQueries({ queryKey: ["orders-today"] });
+    qc.invalidateQueries({ queryKey: ["items-today"] });
   }
 
   async function exportDayPdf(silent = false) {
@@ -245,9 +258,14 @@ function OwnerPage() {
                 <span className="font-medium">Table {o.table_number}</span>
                 <span className="text-muted-foreground">{new Date(o.created_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</span>
                 <span className="font-semibold">{money(o.total)}</span>
-                <Button size="sm" variant="outline" onClick={() => viewBill(o.id, o.table_number, o.created_at)}>
-                  <Receipt className="h-3 w-3 mr-1" /> Bill
-                </Button>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="outline" onClick={() => viewBill(o.id, o.table_number, o.created_at)}>
+                    <Receipt className="h-3 w-3 mr-1" /> Bill
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => deleteBill(o.id, o.table_number)} aria-label="Delete bill">
+                    <Trash2 className="h-3 w-3 text-destructive" />
+                  </Button>
+                </div>
               </li>
             ))}
           </ul>
@@ -282,6 +300,9 @@ function OwnerPage() {
                   <span className="font-semibold w-20 text-right">{money(o.total)}</span>
                   <Button size="sm" variant="outline" onClick={() => viewBill(o.id, o.table_number, o.created_at)}>
                     <Receipt className="h-3 w-3 mr-1" /> Bill
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => deleteBill(o.id, o.table_number)} aria-label="Delete bill">
+                    <Trash2 className="h-3 w-3 text-destructive" />
                   </Button>
                 </li>
               ))}
