@@ -301,6 +301,9 @@ function OwnerPage() {
                   <Button size="sm" variant="outline" onClick={() => viewBill(o.id, o.table_number, o.created_at)}>
                     <Receipt className="h-3 w-3 mr-1" /> Bill
                   </Button>
+                  <Button size="sm" variant="outline" onClick={() => deleteBill(o.id, o.table_number)} aria-label="Delete bill">
+                    <Trash2 className="h-3 w-3 text-destructive" />
+                  </Button>
                 </li>
               ))}
             </ul>
