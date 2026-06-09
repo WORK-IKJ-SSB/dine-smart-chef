@@ -256,6 +256,40 @@ function OwnerPage() {
 
       <BillDialog open={billOpen} onOpenChange={setBillOpen} bill={bill} showConfirm={false} />
 
+      <Card className="p-6 mt-8">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-serif text-lg font-semibold flex items-center gap-2">
+            <Receipt className="h-5 w-5 text-primary" /> Order History (last 90 days)
+          </h3>
+          <span className="text-xs text-muted-foreground">{history.length} order{history.length === 1 ? "" : "s"} · live</span>
+        </div>
+        {history.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No orders in the past 90 days.</p>
+        ) : (
+          <div className="max-h-[28rem] overflow-y-auto">
+            <ul className="divide-y divide-border">
+              {history.map((o) => (
+                <li key={o.id} className="flex items-center justify-between gap-3 py-2 text-sm">
+                  <span className="font-medium w-20">Table {o.table_number}</span>
+                  <span className="text-muted-foreground flex-1">
+                    {new Date(o.created_at).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+                  </span>
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                    o.status === "ready" ? "bg-accent text-accent-foreground"
+                    : o.status === "paid" ? "bg-muted text-muted-foreground"
+                    : "bg-secondary text-secondary-foreground"
+                  }`}>{o.status}</span>
+                  <span className="font-semibold w-20 text-right">{money(o.total)}</span>
+                  <Button size="sm" variant="outline" onClick={() => viewBill(o.id, o.table_number, o.created_at)}>
+                    <Receipt className="h-3 w-3 mr-1" /> Bill
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </Card>
+
       <div className="mt-8">
         <MenuManager />
       </div>
