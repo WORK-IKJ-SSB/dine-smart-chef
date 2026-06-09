@@ -16,10 +16,13 @@ import { Receipt, Download } from "lucide-react";
 import { Trash2 } from "lucide-react";
 import { downloadDailyBillsPdf, type BillRow } from "@/lib/billsPdf";
 import { toast } from "sonner";
+import { verifyOwnerPassword } from "@/lib/owner-auth.functions";
+import { Input } from "@/components/ui/input";
+import { Lock, LogOut } from "lucide-react";
 
 export const Route = createFileRoute("/owner")({
   head: () => ({ meta: [{ title: "Owner — TRUST MOMOS" }] }),
-  component: OwnerPage,
+  component: OwnerGate,
 });
 
 type Order = { id: string; table_number: number; status: string; total: number; created_at: string };
@@ -27,7 +30,65 @@ type Item = { id: string; order_id: string; name: string; price: number; quantit
 
 const COLORS = ["#c2410c", "#ea580c", "#f97316", "#fb923c", "#fdba74", "#fed7aa"];
 
-function OwnerPage() {
+const OWNER_AUTH_KEY = "owner-authed";
+
+function OwnerGate() {
+  const [authed, setAuthed] = useState<boolean>(() =>
+    typeof window !== "undefined" && sessionStorage.getItem(OWNER_AUTH_KEY) === "1"
+  );
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const verify = useServerFn(verifyOwnerPassword);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const res = await verify({ data: { password } });
+      if (res.ok) {
+        sessionStorage.setItem(OWNER_AUTH_KEY, "1");
+        setAuthed(true);
+      } else {
+        toast.error("Incorrect password");
+        setPassword("");
+      }
+    } catch (err: any) {
+      toast.error(err?.message ?? "Verification failed");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (authed) {
+    return <OwnerPage onSignOut={() => { sessionStorage.removeItem(OWNER_AUTH_KEY); setAuthed(false); }} />;
+  }
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background p-6">
+      <Card className="p-8 w-full max-w-sm">
+        <div className="flex items-center gap-2 mb-4">
+          <Lock className="h-5 w-5 text-primary" />
+          <h1 className="font-serif text-xl font-semibold">Owner Access</h1>
+        </div>
+        <p className="text-sm text-muted-foreground mb-4">Enter the owner password to continue.</p>
+        <form onSubmit={submit} className="space-y-3">
+          <Input
+            type="password"
+            autoFocus
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Password"
+          />
+          <Button type="submit" className="w-full" disabled={loading || !password}>
+            {loading ? "Verifying…" : "Unlock"}
+          </Button>
+        </form>
+      </Card>
+    </div>
+  );
+}
+
+function OwnerPage({ onSignOut }: { onSignOut: () => void }) {
   const qc = useQueryClient();
   const { data: orders = [] } = useQuery({
     queryKey: ["orders-today"],
@@ -182,6 +243,11 @@ function OwnerPage() {
 
   return (
     <StationShell title="Owner Dashboard" subtitle="Today's performance & AI insights">
+      <div className="flex justify-end mb-4">
+        <Button size="sm" variant="outline" onClick={onSignOut}>
+          <LogOut className="h-4 w-4 mr-2" /> Sign out
+        </Button>
+      </div>
       <div className="grid gap-4 md:grid-cols-3 mb-8">
         <StatCard icon={ShoppingBag} label="Orders Today" value={stats.totalOrders.toString()} />
         <StatCard icon={DollarSign} label="Revenue" value={money(stats.totalRevenue)} />
