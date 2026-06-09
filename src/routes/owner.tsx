@@ -258,9 +258,14 @@ function OwnerPage() {
                 <span className="font-medium">Table {o.table_number}</span>
                 <span className="text-muted-foreground">{new Date(o.created_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</span>
                 <span className="font-semibold">{money(o.total)}</span>
-                <Button size="sm" variant="outline" onClick={() => viewBill(o.id, o.table_number, o.created_at)}>
-                  <Receipt className="h-3 w-3 mr-1" /> Bill
-                </Button>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="outline" onClick={() => viewBill(o.id, o.table_number, o.created_at)}>
+                    <Receipt className="h-3 w-3 mr-1" /> Bill
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => deleteBill(o.id, o.table_number)} aria-label="Delete bill">
+                    <Trash2 className="h-3 w-3 text-destructive" />
+                  </Button>
+                </div>
               </li>
             ))}
           </ul>
