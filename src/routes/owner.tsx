@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState, useEffect } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
@@ -27,6 +27,7 @@ type Item = { id: string; order_id: string; name: string; price: number; quantit
 const COLORS = ["#c2410c", "#ea580c", "#f97316", "#fb923c", "#fdba74", "#fed7aa"];
 
 function OwnerPage() {
+  const qc = useQueryClient();
   const { data: orders = [] } = useQuery({
     queryKey: ["orders-today"],
     queryFn: async () => {
@@ -53,6 +54,35 @@ function OwnerPage() {
     },
     refetchInterval: 5000,
   });
+
+  // 90-day live history
+  const { data: history = [] } = useQuery({
+    queryKey: ["owner-history-90d"],
+    queryFn: async () => {
+      const since = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+      const { data, error } = await supabase
+        .from("orders").select("*")
+        .gte("created_at", since.toISOString())
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data as Order[];
+    },
+  });
+
+  useEffect(() => {
+    const ch = supabase
+      .channel("owner-orders-history")
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => {
+        qc.invalidateQueries({ queryKey: ["owner-history-90d"] });
+        qc.invalidateQueries({ queryKey: ["orders-today"] });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "order_items" }, () => {
+        qc.invalidateQueries({ queryKey: ["items-today"] });
+        qc.invalidateQueries({ queryKey: ["history-items"] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [qc]);
 
   const [bill, setBill] = useState<BillData | null>(null);
   const [billOpen, setBillOpen] = useState(false);
