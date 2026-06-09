@@ -5,7 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { StationShell } from "@/components/StationShell";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Plus, Minus, Send, Trash2, Receipt } from "lucide-react";
+import { Plus, Minus, Send, Trash2, Receipt, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { money } from "@/lib/format";
 import { BillDialog, type BillData } from "@/components/BillDialog";
@@ -27,6 +28,7 @@ function WaiterPage() {
   const [submitting, setSubmitting] = useState(false);
   const [bill, setBill] = useState<BillData | null>(null);
   const [billOpen, setBillOpen] = useState(false);
+  const [menuSearch, setMenuSearch] = useState("");
 
   const { data: menu = [] } = useQuery({
     queryKey: ["menu"],
@@ -67,14 +69,22 @@ function WaiterPage() {
     return () => { supabase.removeChannel(ch); };
   }, [qc]);
 
+  const filteredMenu = useMemo(() => {
+    const q = menuSearch.trim().toLowerCase();
+    if (!q) return menu;
+    return menu.filter(
+      (i) => i.name.toLowerCase().includes(q) || i.category.toLowerCase().includes(q),
+    );
+  }, [menu, menuSearch]);
+
   const categories = useMemo(() => {
     const m = new Map<string, MenuItem[]>();
-    for (const it of menu) {
+    for (const it of filteredMenu) {
       if (!m.has(it.category)) m.set(it.category, []);
       m.get(it.category)!.push(it);
     }
     return [...m.entries()];
-  }, [menu]);
+  }, [filteredMenu]);
 
   const total = useMemo(
     () => Object.values(cart).reduce((s, c) => s + Number(c.item.price) * c.qty, 0),
@@ -193,6 +203,20 @@ function WaiterPage() {
 
           <Card className="p-5">
             <h3 className="font-serif text-lg font-semibold mb-3">Menu</h3>
+            <div className="relative mb-4">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                value={menuSearch}
+                onChange={(e) => setMenuSearch(e.target.value)}
+                placeholder="Search menu…"
+                className="pl-9"
+              />
+            </div>
+            {categories.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-6 text-center">
+                {menuSearch ? `No items match "${menuSearch}".` : "No menu items yet."}
+              </p>
+            ) : (
             <div className="space-y-6">
               {categories.map(([cat, list]) => (
                 <div key={cat}>
@@ -239,6 +263,7 @@ function WaiterPage() {
                 </div>
               ))}
             </div>
+            )}
           </Card>
         </div>
 

@@ -1,10 +1,10 @@
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Camera, Upload, Sparkles, Trash2, ImageIcon, Loader2, Plus, ImagePlus, Pencil } from "lucide-react";
+import { Camera, Upload, Sparkles, Trash2, ImageIcon, Loader2, Plus, ImagePlus, Pencil, Search } from "lucide-react";
 import { toast } from "sonner";
 import { parseMenuImage, generateDishImage } from "@/lib/menu-ai.functions";
 import { money } from "@/lib/format";
@@ -35,11 +35,10 @@ export function MenuManager() {
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
   const itemImgRef = useRef<HTMLInputElement>(null);
-  const perItemImgRef = useRef<HTMLInputElement>(null);
-  const [uploadTargetId, setUploadTargetId] = useState<string | null>(null);
   const [parsing, setParsing] = useState(false);
   const [generatingId, setGeneratingId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
+  const [search, setSearch] = useState("");
   const [form, setForm] = useState<{ name: string; price: string; category: string; imageDataUrl: string | null }>({
     name: "", price: "", category: "Main", imageDataUrl: null,
   });
@@ -156,11 +155,29 @@ export function MenuManager() {
       qc.invalidateQueries({ queryKey: ["menu"] });
     } catch (e: any) {
       toast.error(e.message ?? "Failed to upload image");
-    } finally {
-      if (perItemImgRef.current) perItemImgRef.current.value = "";
-      setUploadTargetId(null);
     }
   }
+
+  function pickImageFor(itemId: string) {
+    // Create a fresh input element so the same item can be re-uploaded any
+    // number of times (including picking the same filename again).
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.onchange = () => {
+      const f = input.files?.[0];
+      if (f) uploadImageFor(itemId, f);
+    };
+    input.click();
+  }
+
+  const filteredItems = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return items;
+    return items.filter(
+      (i) => i.name.toLowerCase().includes(q) || i.category.toLowerCase().includes(q),
+    );
+  }, [items, search]);
 
   return (
     <Card className="p-6">
@@ -184,17 +201,29 @@ export function MenuManager() {
         </div>
       </div>
 
+      <div className="relative mb-4">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search menu items…"
+          className="pl-9"
+        />
+      </div>
+
       {items.length === 0 ? (
         <p className="text-sm text-muted-foreground py-8 text-center">No items yet.</p>
+      ) : filteredItems.length === 0 ? (
+        <p className="text-sm text-muted-foreground py-8 text-center">No items match "{search}".</p>
       ) : (
         <div className="space-y-5">
-          {CATEGORIES.filter(c => items.some(i => i.category === c)).concat(
-            [...new Set(items.map(i => i.category))].filter(c => !CATEGORIES.includes(c))
+          {CATEGORIES.filter(c => filteredItems.some(i => i.category === c)).concat(
+            [...new Set(filteredItems.map(i => i.category))].filter(c => !CATEGORIES.includes(c))
           ).map((cat) => (
             <div key={cat}>
               <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">{cat}</p>
               <ul className="grid sm:grid-cols-2 gap-3">
-              {items.filter(i => i.category === cat).map((it) => (
+              {filteredItems.filter(i => i.category === cat).map((it) => (
             <li key={it.id} className="flex gap-3 rounded-lg border border-border p-3 bg-background">
               <div className="h-16 w-16 shrink-0 rounded-md overflow-hidden bg-muted flex items-center justify-center">
                 {it.image_url ? (
@@ -223,10 +252,10 @@ export function MenuManager() {
                     <Pencil className="h-3 w-3" /> Rename
                   </button>
                   <button
-                    onClick={() => { setUploadTargetId(it.id); perItemImgRef.current?.click(); }}
+                    onClick={() => pickImageFor(it.id)}
                     className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary"
                   >
-                    <ImagePlus className="h-3 w-3" /> Upload
+                    <ImagePlus className="h-3 w-3" /> {it.image_url ? "Change" : "Upload"}
                   </button>
                   <button onClick={() => remove(it.id)} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive">
                     <Trash2 className="h-3 w-3" /> Remove
@@ -240,14 +269,6 @@ export function MenuManager() {
           ))}
         </div>
       )}
-
-      <input
-        ref={perItemImgRef} type="file" accept="image/*" className="hidden"
-        onChange={(e) => {
-          const f = e.target.files?.[0];
-          if (f && uploadTargetId) uploadImageFor(uploadTargetId, f);
-        }}
-      />
 
       <div className="mt-6 pt-6 border-t border-border">
         <h4 className="font-serif text-base font-semibold mb-3">Add item manually</h4>
