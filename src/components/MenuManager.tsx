@@ -55,25 +55,38 @@ export function MenuManager() {
     },
   });
 
-  async function handleFile(file: File) {
+  async function handleFiles(files: File[]) {
+    if (files.length === 0) return;
     setParsing(true);
+    let totalAdded = 0;
+    let failed = 0;
     try {
-      const dataUrl = await fileToDataUrl(file);
-      const { items: parsed } = await parse({ data: { imageDataUrl: dataUrl } });
-      if (parsed.length === 0) {
-        toast.error("Couldn't read any dishes from that image.");
-        return;
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        try {
+          const dataUrl = await fileToDataUrl(file);
+          const { items: parsed } = await parse({ data: { imageDataUrl: dataUrl } });
+          if (parsed.length === 0) {
+            toast.message(`No dishes found in image ${i + 1} of ${files.length}.`);
+            continue;
+          }
+          const rows = parsed.map((p) => ({
+            name: p.name, price: Number(p.price) || 0, category: p.category || "Main",
+          }));
+          const { error } = await supabase.from("menu_items").insert(rows);
+          if (error) throw error;
+          totalAdded += rows.length;
+          toast.success(`Image ${i + 1}/${files.length}: added ${rows.length} item${rows.length > 1 ? "s" : ""}.`);
+          qc.invalidateQueries({ queryKey: ["menu-all"] });
+          qc.invalidateQueries({ queryKey: ["menu"] });
+        } catch (e: any) {
+          failed++;
+          toast.error(`Image ${i + 1} failed: ${e.message ?? "parse error"}`);
+        }
       }
-      const rows = parsed.map((p) => ({
-        name: p.name, price: Number(p.price) || 0, category: p.category || "Main",
-      }));
-      const { error } = await supabase.from("menu_items").insert(rows);
-      if (error) throw error;
-      toast.success(`Added ${rows.length} item${rows.length > 1 ? "s" : ""} from the menu photo.`);
-      qc.invalidateQueries({ queryKey: ["menu-all"] });
-      qc.invalidateQueries({ queryKey: ["menu"] });
-    } catch (e: any) {
-      toast.error(e.message ?? "Failed to parse menu");
+      if (files.length > 1) {
+        toast.success(`Done — ${totalAdded} item${totalAdded === 1 ? "" : "s"} added${failed ? `, ${failed} failed` : ""}.`);
+      }
     } finally {
       setParsing(false);
       if (fileRef.current) fileRef.current.value = "";
@@ -187,10 +200,10 @@ export function MenuManager() {
           <p className="text-sm text-muted-foreground">Upload or snap a photo of your paper menu — AI extracts every dish.</p>
         </div>
         <div className="flex gap-2">
-          <input ref={fileRef} type="file" accept="image/*" className="hidden"
-            onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
-          <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden"
-            onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
+          <input ref={fileRef} type="file" accept="image/*" multiple className="hidden"
+            onChange={(e) => { const fs = Array.from(e.target.files ?? []); if (fs.length) handleFiles(fs); }} />
+          <input ref={cameraRef} type="file" accept="image/*" capture="environment" multiple className="hidden"
+            onChange={(e) => { const fs = Array.from(e.target.files ?? []); if (fs.length) handleFiles(fs); }} />
           <Button variant="outline" disabled={parsing} onClick={() => cameraRef.current?.click()}>
             <Camera className="h-4 w-4 mr-2" /> Snap
           </Button>
